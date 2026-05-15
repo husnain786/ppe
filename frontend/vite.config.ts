@@ -9,6 +9,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    watch: {
+      exclude: ['node_modules/**', 'dist/**', '**/.git/**']
+    }
+  },
   server: {
     allowedHosts: true,
     proxy: {
