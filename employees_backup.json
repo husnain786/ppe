@@ -1,0 +1,9 @@
+[INIT] Pre-loading DeepFace models into GPU memory...
+[INIT] Warning: Could not pre-load DeepFace models: module 'deepface.models.face_detection.RetinaFace' has no attribute 'build_model'
+[INIT] PPE YOLO Error loading ppe.pt: Torch not compiled with CUDA enabled
+[INIT] PPE YOLO Fallback Error: Torch not compiled with CUDA enabled
+[INIT] COCO YOLO Error loading yolo11n.pt: Torch not compiled with CUDA enabled
+[INIT] COCO YOLO Fallback Error: Torch not compiled with CUDA enabled
+[INIT] Background Face Recognition Worker Started.
+[
+]

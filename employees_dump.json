@@ -1,0 +1,29 @@
+[
+{
+  "model": "dashboard.employee",
+  "pk": 2,
+  "fields": {
+    "name": "Hussnain Muhammad Raza",
+    "employee_id": "1212",
+    "photo": "employees/WC202438_1768378388.jpg"
+  }
+},
+{
+  "model": "dashboard.employee",
+  "pk": 3,
+  "fields": {
+    "name": "Mohammad Ahmad Javed",
+    "employee_id": "001",
+    "photo": "employees/IMG7185_1644586800.jpg"
+  }
+},
+{
+  "model": "dashboard.employee",
+  "pk": 4,
+  "fields": {
+    "name": "Muhammad Ahsan Raza",
+    "employee_id": "1341",
+    "photo": "employees/WhatsApp_Image_2026-05-01_at_7.36.49_PM.jpeg"
+  }
+}
+]
