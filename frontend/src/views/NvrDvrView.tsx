@@ -75,8 +75,8 @@ export default function NvrDvrView() {
   const selectedTemplate = templates.find(t => t.id.toString() === formData.rtsp_template);
   let previewUrl = "Select a template to preview URL";
   if (selectedTemplate) {
-    const user = formData.username ? encodeURIComponent(formData.username) : "";
-    const pw = formData.password ? encodeURIComponent(formData.password) : "";
+    const user = formData.username || "";
+    const pw = formData.password || "";
     const auth = user && pw ? `${user}:${pw}@` : "";
     const ip = formData.ip_address || "IP_ADDRESS";
     const port = formData.port || "554";
