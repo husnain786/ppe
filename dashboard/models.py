@@ -1,3 +1,4 @@
+import urllib.parse
 from django.db import models
 
 class Employee(models.Model):
@@ -38,8 +39,8 @@ class CameraDevice(models.Model):
 
     def get_rtsp_url(self):
         if self.nvr and self.nvr.rtsp_template:
-            user = self.nvr.username if self.nvr.username else ""
-            pw = self.nvr.password if self.nvr.password else ""
+            user = urllib.parse.quote(self.nvr.username, safe="") if self.nvr.username else ""
+            pw = urllib.parse.quote(self.nvr.password, safe="") if self.nvr.password else ""
 
             auth = f"{user}:{pw}@" if user and pw else ""
             base_url = f"rtsp://{auth}{self.nvr.ip_address}:{self.nvr.port}"
@@ -52,8 +53,8 @@ class CameraDevice(models.Model):
 
         if self.ip_address:
             if self.username and self.password:
-                user = self.username
-                pw = self.password
+                user = urllib.parse.quote(self.username, safe="")
+                pw = urllib.parse.quote(self.password, safe="")
                 return f"rtsp://{user}:{pw}@{self.ip_address}:554/Streaming/Channels/{self.channel}"
             return f"rtsp://{self.ip_address}:554/Streaming/Channels/{self.channel}"
         return ""
