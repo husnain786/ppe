@@ -431,6 +431,7 @@ def devices(request, pk=None):
         return JsonResponse({'status': 'error', 'errors': form.errors})
     return render(request, 'index.html')
 
+@csrf_exempt
 @require_POST
 def delete_device(request, pk):
     get_object_or_404(CameraDevice, pk=pk).delete()
@@ -477,10 +478,15 @@ def get_employees(request):
 
 import ping3
 import socket
+from .models import NVRDevice, RTSPStringTemplate
+from .forms import NVRDeviceForm, RTSPStringTemplateForm
 
 def get_cameras(request):
     data = []
-    for c in CameraDevice.objects.all().order_by('id'):
+    ip_only = request.GET.get('ip_only') == 'true'
+    qs = CameraDevice.objects.filter(nvr__isnull=True) if ip_only else CameraDevice.objects.all()
+    
+    for c in qs.order_by('id'):
         is_active = False
         source = c.get_rtsp_url()
         with camera_manager.lock:
@@ -488,7 +494,7 @@ def get_cameras(request):
                 inst = camera_manager.instances[source]
                 if not inst.stopped and inst.error_count < 10:
                     is_active = True
-        if not is_active:
+        if not is_active and c.ip_address:
             try:
                 with socket.create_connection((c.ip_address, 554), timeout=0.5): is_active = True
             except:
@@ -496,8 +502,67 @@ def get_cameras(request):
                     delay = ping3.ping(c.ip_address, timeout=0.5)
                     is_active = delay is not None and delay is not False
                 except: pass
-        data.append({ 'id': c.id, 'name': c.name, 'ip': c.ip_address, 'channel': c.channel, 'fps': c.process_frame_rate, 'active': is_active, 'username': c.username, 'password': c.password })
+        data.append({ 'id': c.id, 'name': c.name, 'ip': c.ip_address or f"NVR (CH {c.channel})", 'channel': c.channel, 'fps': c.process_frame_rate, 'active': is_active, 'username': c.username, 'password': c.password })
     return JsonResponse({'cameras': data})
+
+@csrf_exempt
+def rtsp_templates(request, pk=None):
+    if request.method == 'GET':
+        templates = [{'id': t.id, 'name': t.name, 'template_string': t.template_string} for t in RTSPStringTemplate.objects.all().order_by('name')]
+        return JsonResponse({'templates': templates})
+    elif request.method == 'POST':
+        template = get_object_or_404(RTSPStringTemplate, pk=pk) if pk else None
+        form = RTSPStringTemplateForm(request.POST, instance=template)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({'status': 'success'})
+        return JsonResponse({'status': 'error', 'errors': form.errors})
+
+@csrf_exempt
+@require_POST
+def delete_rtsp_template(request, pk):
+    get_object_or_404(RTSPStringTemplate, pk=pk).delete()
+    return JsonResponse({'status': 'success'})
+
+@csrf_exempt
+def nvrs(request, pk=None):
+    if request.method == 'GET':
+        data = []
+        for n in NVRDevice.objects.all().order_by('id'):
+            channels = [{'id': c.id, 'name': c.name, 'channel': c.channel, 'fps': c.process_frame_rate} for c in n.channels.all().order_by('channel')]
+            data.append({
+                'id': n.id, 'name': n.name, 'ip_address': n.ip_address, 'port': n.port,
+                'username': n.username, 'password': n.password, 
+                'rtsp_template_id': n.rtsp_template_id, 'channels': channels
+            })
+        return JsonResponse({'nvrs': data})
+    elif request.method == 'POST':
+        nvr = get_object_or_404(NVRDevice, pk=pk) if pk else None
+        form = NVRDeviceForm(request.POST, instance=nvr)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({'status': 'success'})
+        return JsonResponse({'status': 'error', 'errors': form.errors})
+
+@csrf_exempt
+@require_POST
+def delete_nvr(request, pk):
+    get_object_or_404(NVRDevice, pk=pk).delete()
+    return JsonResponse({'status': 'success'})
+
+@csrf_exempt
+@require_POST
+def add_nvr_channel(request, pk):
+    nvr = get_object_or_404(NVRDevice, pk=pk)
+    channel = request.POST.get('channel', 1)
+    fps = request.POST.get('process_frame_rate', 10)
+    
+    if CameraDevice.objects.filter(nvr=nvr, channel=channel).exists():
+        return JsonResponse({'status': 'error', 'message': 'Channel already exists.'})
+        
+    name = f"{nvr.name} - CH {channel}"
+    CameraDevice.objects.create(name=name, channel=channel, process_frame_rate=fps, nvr=nvr)
+    return JsonResponse({'status': 'success'})
 
 @csrf_exempt
 @require_POST

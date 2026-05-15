@@ -10,7 +10,7 @@ export default function DevicesView() {
   const [editFormData, setEditFormData] = useState<any>({});
 
   const fetchDevices = () => {
-    fetch('/api/cameras/')
+    fetch('/api/cameras/?ip_only=true')
       .then(res => res.json())
       .then(data => setDevices(data.cameras || []))
       .catch(err => console.error("Error fetching cameras:", err));
@@ -108,15 +108,15 @@ export default function DevicesView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-semibold tracking-tight text-white">Device Management</h2>
-          <p className="mt-1 text-sm text-slate-400">Configure and monitor AI-powered camera devices</p>
+          <h2 className="text-3xl font-semibold tracking-tight text-white">IP Cameras</h2>
+          <p className="mt-1 text-sm text-slate-400">Configure and monitor standalone IP cameras directly via RTSP</p>
         </div>
-        <Button onClick={() => setIsAdding(true)}>+ Add Device</Button>
+        <Button onClick={() => setIsAdding(true)}>+ Add IP Camera</Button>
       </div>
 
       {isAdding && (
         <Card className="p-6 animate-[fadeIn_0.3s_ease-out]">
-          <SectionTitle title="New Camera Device" subtitle="Enter RTSP connection details" />
+          <SectionTitle title="New IP Camera" subtitle="Enter RTSP connection details" />
           <form onSubmit={handleAddDevice} className="mt-4 grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-xs text-slate-400 font-bold uppercase tracking-wider">IP Address</label>

@@ -9,6 +9,8 @@ import AssetsView from "./views/AssetsView";
 import AdminView from "./views/AdminView";
 import EmployeeView from "./views/EmployeeView";
 import DevicesView from "./views/DevicesView";
+import NvrDvrView from "./views/NvrDvrView";
+import RtspStringsView from "./views/RtspStringsView";
 
 export default function App() {
   const [active, setActive] = useState("overview");
@@ -39,8 +41,12 @@ export default function App() {
         return <IntelligenceView />;
       case "assets":
         return <AssetsView />;
-      case "devices":
+      case "ip_cameras":
         return <DevicesView />;
+      case "nvr_dvr":
+        return <NvrDvrView />;
+      case "rtsp_strings":
+        return <RtspStringsView />;
       case "admin":
         return <AdminView params={params} toggleParam={toggleParam} setAllCore={setAllCore} setAllAddon={setAllAddon} setAll={setAll} />;
       case "employees":

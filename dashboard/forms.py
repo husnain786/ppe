@@ -1,5 +1,5 @@
 from django import forms
-from .models import Employee, CameraDevice
+from .models import Employee, CameraDevice, NVRDevice, RTSPStringTemplate
 
 class EmployeeForm(forms.ModelForm):
     class Meta:
@@ -14,7 +14,7 @@ class EmployeeForm(forms.ModelForm):
 class CameraDeviceForm(forms.ModelForm):
     class Meta:
         model = CameraDevice
-        fields = ['name', 'ip_address', 'username', 'password', 'channel', 'process_frame_rate', 'is_active']
+        fields = ['name', 'ip_address', 'username', 'password', 'channel', 'process_frame_rate', 'is_active', 'nvr']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'ip_address': forms.TextInput(attrs={'class': 'form-control'}),
@@ -24,3 +24,13 @@ class CameraDeviceForm(forms.ModelForm):
             'process_frame_rate': forms.NumberInput(attrs={'class': 'form-control'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+class NVRDeviceForm(forms.ModelForm):
+    class Meta:
+        model = NVRDevice
+        fields = ['name', 'ip_address', 'port', 'username', 'password', 'rtsp_template']
+
+class RTSPStringTemplateForm(forms.ModelForm):
+    class Meta:
+        model = RTSPStringTemplate
+        fields = ['name', 'template_string']

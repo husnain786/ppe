@@ -5,7 +5,9 @@ export const navItems = [
   { id: "operations", label: "Operations", short: "OP", category: "MAIN MENU" },
   { id: "intelligence", label: "Intelligence", short: "IN", category: "MAIN MENU" },
   { id: "assets", label: "Assets & Access", short: "AA", category: "MAIN MENU" },
-  { id: "devices", label: "Devices", short: "DC", category: "DEVICES" },
+  { id: "ip_cameras", label: "IP Cameras", short: "IP", category: "CAMERAS" },
+  { id: "nvr_dvr", label: "NVR / DVR", short: "NV", category: "CAMERAS" },
+  { id: "rtsp_strings", label: "RTSP Strings", short: "RS", category: "CAMERAS" },
   { id: "admin", label: "Admin Settings", short: "AD", category: "SYSTEM" },
   { id: "employees", label: "Employees", short: "EM", category: "HR" },
 ];
