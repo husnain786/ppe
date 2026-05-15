@@ -37,28 +37,26 @@ class CameraDevice(models.Model):
     nvr = models.ForeignKey(NVRDevice, null=True, blank=True, on_delete=models.CASCADE, related_name='channels')
 
     def get_rtsp_url(self):
-        import urllib.parse
         if self.nvr and self.nvr.rtsp_template:
-            user = urllib.parse.quote(self.nvr.username) if self.nvr.username else ""
-            pw = urllib.parse.quote(self.nvr.password) if self.nvr.password else ""
-            
+            user = self.nvr.username if self.nvr.username else ""
+            pw = self.nvr.password if self.nvr.password else ""
+
             auth = f"{user}:{pw}@" if user and pw else ""
             base_url = f"rtsp://{auth}{self.nvr.ip_address}:{self.nvr.port}"
-            
+
             suffix = self.nvr.rtsp_template.template_string.replace('{channel}', str(self.channel))
             if not suffix.startswith('/'):
                 suffix = '/' + suffix
-                
+
             return base_url + suffix
 
         if self.ip_address:
             if self.username and self.password:
-                user = urllib.parse.quote(self.username)
-                pw = urllib.parse.quote(self.password)
+                user = self.username
+                pw = self.password
                 return f"rtsp://{user}:{pw}@{self.ip_address}:554/Streaming/Channels/{self.channel}"
             return f"rtsp://{self.ip_address}:554/Streaming/Channels/{self.channel}"
         return ""
-
     def __str__(self):
         return f"{self.name} - {self.ip_address if self.ip_address else 'NVR Channel ' + str(self.channel)}"
 
