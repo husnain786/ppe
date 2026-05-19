@@ -1,6 +1,45 @@
+import { useEffect, useState } from "react";
 import { Badge, Button, Card, MetricCard, SectionTitle, Switch } from "../components/ui";
 
 export default function AdminView({ params, toggleParam, setAllCore, setAllAddon, setAll }: any) {
+  const [openTime, setOpenTime] = useState("09:00");
+  const [closeTime, setCloseTime] = useState("18:00");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings/')
+      .then(res => res.json())
+      .then(data => {
+        setOpenTime(data.office_open_time);
+        setCloseTime(data.office_close_time);
+      })
+      .catch(err => console.error("Error fetching settings:", err));
+  }, []);
+
+  const saveSettings = () => {
+    setIsSaving(true);
+    const formData = new FormData();
+    formData.append('office_open_time', openTime);
+    formData.append('office_close_time', closeTime);
+
+    fetch('/api/settings/', {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || ''
+      },
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        alert("Settings updated successfully!");
+      }
+    })
+    .catch(err => console.error("Error saving settings:", err))
+    .finally(() => setIsSaving(false));
+  };
+
   const enabledCount = params.filter((p: any) => p.enabled).length;
   const coreCount = params.filter((p: any) => p.tier === "Core" && p.enabled).length;
   const addonCount = params.filter((p: any) => p.tier === "Addon" && p.enabled).length;
@@ -90,6 +129,35 @@ export default function AdminView({ params, toggleParam, setAllCore, setAllAddon
         </Card>
 
         <div className="space-y-6">
+          <Card>
+            <div className="border-b border-white/10 p-5">
+              <SectionTitle title="Office Hours" subtitle="Set your operational schedule" />
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Office Open Time</label>
+                <input 
+                  type="time" 
+                  value={openTime}
+                  onChange={(e) => setOpenTime(e.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 p-3 text-white focus:border-cyan-500/50 focus:outline-none transition-colors"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Office Close Time</label>
+                <input 
+                  type="time" 
+                  value={closeTime}
+                  onChange={(e) => setCloseTime(e.target.value)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 p-3 text-white focus:border-cyan-500/50 focus:outline-none transition-colors"
+                />
+              </div>
+              <Button className="w-full mt-2" onClick={saveSettings} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Update Office Hours"}
+              </Button>
+            </div>
+          </Card>
+
           <Card>
             <div className="border-b border-white/10 p-5">
               <SectionTitle title="Admin Controls" subtitle="Bulk actions and deployment presets" />

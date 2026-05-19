@@ -1,11 +1,20 @@
 import os
 # MUST be set before any other imports
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
-os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
 os.environ["TF_CUDNN_USE_AUTOTUNE"] = "0" 
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True" 
 os.environ["OPENCV_FFMPEG_THREADS"] = "1"
 os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
+
+import tensorflow as tf
+HAS_GPU = len(tf.config.list_physical_devices('GPU')) > 0
+
+if HAS_GPU:
+    os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True" 
+else:
+    # Force CPU for TensorFlow if no GPU found
+    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+    print("[SYSTEM] No GPU detected. Running in CPU mode.")
 
 import cv2
 import numpy as np
@@ -28,7 +37,8 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 import tensorflow as tf
 from deepface import DeepFace
 
-from .models import Employee, AlertLog, CameraDevice
+from django.utils import timezone
+from .models import Employee, AlertLog, CameraDevice, Attendance, SystemSettings
 from .forms import EmployeeForm, CameraDeviceForm
 from . import model_swapper
 
@@ -99,9 +109,9 @@ def face_recognition_worker():
                         db_images = [f for f in os.listdir(db_p) if f.lower().endswith(('.jpg', '.png')) and not f.endswith('.pkl')]
                         if len(db_images) > 0:
                             try:
-                                print(f"[WORKER] Analyzing with ArcFace (Strict Detection)...")
+                                print(f"[WORKER] Analyzing with ArcFace (RetinaFace Backend)...")
                                 with yolo_lock:
-                                    # Use RetinaFace but don't abort if it fails (enforce_detection=False)
+                                    # RetinaFace is slower on CPU but much more accurate than OpenCV
                                     dfs = DeepFace.find(
                                         img_path=face_crop, 
                                         db_path=db_p, 
@@ -120,18 +130,18 @@ def face_recognition_worker():
                                     best_id = os.path.basename(df.iloc[0]['identity'])
                                     final_dist = best_dist
                                     
-                                    # Always find who the best match is for diagnostics
+                                    # Find the best match for diagnostics/likely candidate
                                     candidate = Employee.objects.filter(photo__icontains=best_id).first()
                                     if candidate:
                                         likely_name = candidate.name
 
-                                    # Threshold for ArcFace (0.55 for strict CCTV matching)
-                                    if best_dist < 0.55:
+                                    # Loosened threshold for better recognition on CPU/webcam (0.65)
+                                    if best_dist < 0.65:
                                         if candidate:
                                             emp_id, is_unk = candidate, False
-                                            print(f"[SUCCESS] ArcFace Confirmed: {candidate.name} (Dist: {best_dist:.4f})")
+                                            print(f"[SUCCESS] ArcFace Recognized: {candidate.name} (Dist: {best_dist:.4f})")
                                     else:
-                                        print(f"[VOTE] ArcFace confidence too low ({best_dist:.4f} > 0.55). Result: Unknown.")
+                                        print(f"[WORKER] Confidence low ({best_dist:.4f} > 0.65). Status: Unknown.")
                                 else:
                                     print(f" >>> [RESULT] ArcFace: No matches found in database.")
                             except ValueError:
@@ -144,14 +154,45 @@ def face_recognition_worker():
             
             # Save Alert (Abort if no face was found during a scan)
             if not skip_log:
-                AlertLog.objects.create(
-                    employee=emp_id, 
-                    unknown_person=is_unk, 
-                    violation_type=v_type, 
-                    distance_score=final_dist,
-                    likely_candidate=likely_name if is_unk else None,
-                    snapshot=ContentFile(annotated_frame_buf, name=f"a_{uuid.uuid4().hex[:8]}.jpg")
-                )
+                # If we're in face mode and identified an employee, log attendance instead of an alert
+                if v_type == "Face Identification Scan" and not is_unk and emp_id:
+                    today = timezone.now().date()
+                    now_time = timezone.now().time()
+                    sys_settings = SystemSettings.get_settings()
+                    
+                    att, created = Attendance.objects.get_or_create(employee=emp_id, date=today)
+                    if created:
+                        att.check_in = timezone.now()
+                        # Calculate check-in status
+                        if now_time > sys_settings.office_open_time:
+                            att.status = "Late"
+                        else:
+                            att.status = "On Time"
+                        print(f"[ATTENDANCE] Checked-in: {emp_id.name} ({att.status})")
+                    else:
+                        att.check_out = timezone.now()
+                        # Update status if leaving early
+                        if now_time < sys_settings.office_close_time:
+                            if "Late" in att.status:
+                                att.status = "Late & Early Departure"
+                            else:
+                                att.status = "Early Departure"
+                        else:
+                            # If they were late but left on time, keep Late. If they were on time, mark Completed.
+                            if att.status == "On Time":
+                                att.status = "Completed"
+                        print(f"[ATTENDANCE] Updated Check-out: {emp_id.name} ({att.status})")
+                    att.save()
+                else:
+                    # Normal violation or unknown person in face mode
+                    AlertLog.objects.create(
+                        employee=emp_id, 
+                        unknown_person=is_unk, 
+                        violation_type=v_type, 
+                        distance_score=final_dist,
+                        likely_candidate=likely_name if is_unk else None,
+                        snapshot=ContentFile(annotated_frame_buf, name=f"a_{uuid.uuid4().hex[:8]}.jpg")
+                    )
             
             face_queue.task_done()
         except Exception as e:
@@ -602,3 +643,33 @@ def set_system_mode(request):
 
 def get_system_mode(request):
     return JsonResponse({'mode': model_swapper.get_system_mode()})
+
+def get_attendance(request):
+    records = Attendance.objects.select_related('employee').order_by('-date', '-check_in')
+    data = []
+    for r in records:
+        data.append({
+            'employee_name': r.employee.name,
+            'employee_id': r.employee.employee_id,
+            'date': r.date.strftime('%Y-%m-%d'),
+            'check_in': r.check_in.strftime('%H:%M:%S') if r.check_in else None,
+            'check_out': r.check_out.strftime('%H:%M:%S') if r.check_out else None,
+            'status': r.status,
+        })
+    return JsonResponse({'attendance': data})
+
+@csrf_exempt
+def system_settings(request):
+    settings = SystemSettings.get_settings()
+    if request.method == 'POST':
+        open_time = request.POST.get('office_open_time')
+        close_time = request.POST.get('office_close_time')
+        if open_time: settings.office_open_time = open_time
+        if close_time: settings.office_close_time = close_time
+        settings.save()
+        return JsonResponse({'status': 'success'})
+    
+    return JsonResponse({
+        'office_open_time': settings.office_open_time.strftime('%H:%M'),
+        'office_close_time': settings.office_close_time.strftime('%H:%M'),
+    })

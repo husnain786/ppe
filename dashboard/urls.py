@@ -28,5 +28,7 @@ urlpatterns = [
     path('api/cameras/', views.get_cameras, name='get_cameras'),
     path('api/mode/set/', views.set_system_mode, name='set_system_mode'),
     path('api/mode/get/', views.get_system_mode, name='get_system_mode'),
+    path('api/attendance/', views.get_attendance, name='get_attendance'),
+    path('api/settings/', views.system_settings, name='system_settings'),
     re_path(r'^.*$', views.index, name='index'),
 ]

@@ -10,6 +10,7 @@ export const navItems = [
   { id: "rtsp_strings", label: "RTSP Strings", short: "RS", category: "CAMERAS" },
   { id: "admin", label: "Admin Settings", short: "AD", category: "SYSTEM" },
   { id: "employees", label: "Employees", short: "EM", category: "HR" },
+  { id: "attendance", label: "Attendance", short: "AT", category: "HR" },
 ];
 
 export const employees = [

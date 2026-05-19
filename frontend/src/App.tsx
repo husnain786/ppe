@@ -8,6 +8,7 @@ import IntelligenceView from "./views/IntelligenceView";
 import AssetsView from "./views/AssetsView";
 import AdminView from "./views/AdminView";
 import EmployeeView from "./views/EmployeeView";
+import AttendanceView from "./views/AttendanceView";
 import DevicesView from "./views/DevicesView";
 import NvrDvrView from "./views/NvrDvrView";
 import RtspStringsView from "./views/RtspStringsView";
@@ -51,6 +52,8 @@ export default function App() {
         return <AdminView params={params} toggleParam={toggleParam} setAllCore={setAllCore} setAllAddon={setAllAddon} setAll={setAll} />;
       case "employees":
         return <EmployeeView />;
+      case "attendance":
+        return <AttendanceView />;
       default:
         return <OverviewView />;
     }

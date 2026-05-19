@@ -1,5 +1,6 @@
 import urllib.parse
 from django.db import models
+from django.utils import timezone
 
 class Employee(models.Model):
     name = models.CharField(max_length=100)
@@ -73,4 +74,34 @@ class AlertLog(models.Model):
     def __str__(self):
         name = self.employee.name if self.employee else ("Unknown" if self.unknown_person else "Unidentified")
         return f"{name} - {self.violation_type} at {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+
+class Attendance(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='attendance_records')
+    date = models.DateField(default=timezone.now)
+    check_in = models.DateTimeField(null=True, blank=True)
+    check_out = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=100, default="On Time")
+
+    class Meta:
+        unique_together = ('employee', 'date')
+        verbose_name_plural = "Attendance"
+
+    def __str__(self):
+        return f"{self.employee.name} - {self.date}"
+
+class SystemSettings(models.Model):
+    office_open_time = models.TimeField(default="09:00:00")
+    office_close_time = models.TimeField(default="18:00:00")
+
+    def save(self, *args, **kwargs):
+        self.pk = 1 # Ensure singleton
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "System Settings"
 
