@@ -17,7 +17,7 @@ ppe_db.sql
 
 # Environment
 env/
-__pycache__/
+**/__pycache__/
 *.pyc
 
 # Local Config
