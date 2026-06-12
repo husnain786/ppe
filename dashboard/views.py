@@ -135,13 +135,13 @@ def face_recognition_worker():
                                     if candidate:
                                         likely_name = candidate.name
 
-                                    # Loosened threshold for better recognition on CPU/webcam (0.65)
-                                    if best_dist < 0.65:
+                                    # ArcFace/cosine calibrated default threshold (0.68 = DeepFace recommended ceiling)
+                                    if best_dist < 0.68:
                                         if candidate:
                                             emp_id, is_unk = candidate, False
                                             print(f"[SUCCESS] ArcFace Recognized: {candidate.name} (Dist: {best_dist:.4f})")
                                     else:
-                                        print(f"[WORKER] Confidence low ({best_dist:.4f} > 0.65). Status: Unknown.")
+                                        print(f"[WORKER] Confidence low ({best_dist:.4f} > 0.68). Status: Unknown.")
                                 else:
                                     print(f" >>> [RESULT] ArcFace: No matches found in database.")
                             except ValueError:
@@ -307,12 +307,12 @@ class CameraInstance:
     def _process_face_mode(self, frame):
         if model_swapper.yolo_coco is None: return frame
         h, w = frame.shape[:2]
-        DET_SIZE = 640
+        DET_SIZE = 960  # Higher res for CCTV: keeps distant/small people detectable (CPU-balanced)
         small = cv2.resize(frame, (DET_SIZE, int(h * (DET_SIZE / w))))
         sx, sy = w / DET_SIZE, h / int(h * (DET_SIZE / w))
-        
+
         with yolo_lock:
-            results = list(model_swapper.yolo_coco.predict(small, stream=True, conf=0.4, classes=[0], verbose=False))
+            results = list(model_swapper.yolo_coco.predict(small, stream=True, conf=0.25, classes=[0], verbose=False))
             
         annotated = frame.copy()
         now = datetime.now()
