@@ -156,8 +156,8 @@ def face_recognition_worker():
             if not skip_log:
                 # If we're in face mode and identified an employee, log attendance instead of an alert
                 if v_type == "Face Identification Scan" and not is_unk and emp_id:
-                    today = timezone.now().date()
-                    now_time = timezone.now().time()
+                    today = timezone.localtime(timezone.now()).date()
+                    now_time = timezone.localtime(timezone.now()).time()
                     sys_settings = SystemSettings.get_settings()
                     
                     att, created = Attendance.objects.get_or_create(employee=emp_id, date=today)
@@ -183,6 +183,15 @@ def face_recognition_worker():
                                 att.status = "Completed"
                         print(f"[ATTENDANCE] Updated Check-out: {emp_id.name} ({att.status})")
                     att.save()
+                    # Also write to AlertLog so the live alerts panel shows the identified person
+                    AlertLog.objects.create(
+                        employee=emp_id,
+                        unknown_person=False,
+                        violation_type="Face Identification Scan",
+                        distance_score=final_dist,
+                        likely_candidate=None,
+                        snapshot=ContentFile(annotated_frame_buf, name=f"a_{uuid.uuid4().hex[:8]}.jpg")
+                    )
                 else:
                     # Normal violation or unknown person in face mode
                     AlertLog.objects.create(
@@ -508,7 +517,7 @@ def get_logs(request):
         data.append({
             'name': name,
             'violation': l.violation_type,
-            'timestamp': l.timestamp.strftime('%H:%M:%S'),
+            'timestamp': timezone.localtime(l.timestamp).strftime('%H:%M:%S'),
             'snapshot_url': l.snapshot.url if l.snapshot else None
         })
     return JsonResponse({'logs': data})
