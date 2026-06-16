@@ -1,6 +1,6 @@
 import os
+import numpy as np
 from deepface import DeepFace
-from deepface.models.face_detection import RetinaFace
 
 def download_all_models():
     print("--------------------------------------------------")
@@ -24,7 +24,9 @@ def download_all_models():
 
     try:
         print("\n3. Downloading/Verifying RetinaFace Detection Model...")
-        RetinaFace.build_model()
+        # Trigger RetinaFace download by running a dummy detection
+        dummy = np.zeros((160, 160, 3), dtype=np.uint8)
+        DeepFace.represent(img_path=dummy, model_name="ArcFace", detector_backend="retinaface", enforce_detection=False)
         print("   -> RetinaFace Ready.")
     except Exception as e:
         print(f"   -> Error downloading RetinaFace: {e}")
